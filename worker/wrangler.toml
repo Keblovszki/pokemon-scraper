@@ -9,9 +9,15 @@ compatibility_flags = ["nodejs_compat"]
 # havner i den kanal kommandoen blev kørt i.
 ADMIN_CHANNEL_ID = "1543971668324782092"
 
-# Hvor længe en butik må gå uden et snapshot før watchdog'en råber op. Den
-# lokale scraper kører typisk hvert 10. minut, så der er plads til et par
-# fejlede kørsler før det er værd at forstyrre nogen.
+# Repoet hvor scraper-jobbet ligger. Worker'ens cron beder GitHub om at køre
+# det, fordi GitHubs egen "schedule" i praksis ikke fyrer pålideligt.
+# Tokenet ligger som secret: GITHUB_TOKEN.
+GITHUB_REPO = "Keblovszki/pokemon-scraper"
+GITHUB_WORKFLOW = "scrape.yml"
+
+# Hvor længe en butik må gå uden et snapshot før watchdog'en råber op.
+# Scrape-jobbet startes hvert kvarter, så der er plads til et par fejlede
+# kørsler før det er værd at forstyrre nogen.
 STALE_MINUTES = "45"
 
 [triggers]

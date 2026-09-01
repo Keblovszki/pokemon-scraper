@@ -6,7 +6,7 @@ import { postMessage, staleWarning } from "./notify.js";
 
 export default {
     async scheduled(event, env, ctx) {
-        ctx.waitUntil(watchdog(env));
+        ctx.waitUntil(Promise.all([startScrape(env), watchdog(env)]));
     },
 
     async fetch(request, env, ctx) {
@@ -137,6 +137,36 @@ function validateSnapshot(snapshot) {
     if (bad) return `vare mangler felter: ${JSON.stringify(bad).slice(0, 200)}`;
 
     return null;
+}
+
+// GitHubs egen "schedule" fyrede slet ikke i praksis — planlagte kørsler bliver
+// forsinket eller droppet når der er pres på deres delte runnere, og et
+// kvartersinterval rammer netop de klokkeslæt hvor presset er størst.
+// Cloudflares cron er til gengæld pålidelig, så vi lader den bede GitHub om at
+// køre jobbet i stedet. "workflow_dispatch" starter med det samme, hver gang.
+async function startScrape(env) {
+    if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) return;
+
+    const url = `https://api.github.com/repos/${env.GITHUB_REPO}/actions/workflows/${env.GITHUB_WORKFLOW ?? "scrape.yml"}/dispatches`;
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+            Accept: "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            // GitHubs API afviser forespørgsler uden User-Agent med 403, og den
+            // fejl ligner til forveksling et forkert token.
+            "User-Agent": "pokemon-scraper-bot",
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ref: env.GITHUB_REF ?? "main" }),
+    });
+
+    // Et vellykket dispatch svarer 204 uden indhold. Alt andet logges og lades
+    // ligge: bliver det ved, opdager vagthunden det som manglende snapshots.
+    if (response.status !== 204) {
+        console.error(`Kunne ikke starte scrape-jobbet: ${response.status} ${await response.text()}`);
+    }
 }
 
 async function watchdog(env) {

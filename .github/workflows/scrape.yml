@@ -1,10 +1,10 @@
 name: Scrape butikker
 
+# Kun dispatch. GitHubs "schedule" blev prøvet og fyrede ikke en eneste gang
+# på to en halv time — planlagte kørsler bliver droppet når der er pres på de
+# delte runnere. Worker'ens cron kalder i stedet dispatch-API'et hvert kvarter,
+# og den starter med det samme.
 on:
-  schedule:
-    # Hvert kvarter. GitHub kan forsinke planlagte kørsler når der er travlt,
-    # så regn med at det i praksis bliver 15-30 minutter.
-    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 # To kørsler ad gangen ville sende to snapshots oven i hinanden, og så kan den
