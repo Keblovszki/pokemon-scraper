@@ -18,7 +18,10 @@ export const shop = {
     id: "proshop",
     name: "Proshop",
     needsBrowser: true,
-    categories: [{ label: "Pokemon", path: "/Pokemon" }],
+    // Hovedkategorien "/Pokemon" er 147 varer, men de 127 er bamser, figurer og
+    // legetøj. Butikkens egen kortkategori rammer kortspillet præcist, inklusive
+    // portfolios og lommer til kortene.
+    categories: [{ label: "Pokemon-kort", path: "/pokemon-kort" }],
 
     async scrape(page, log) {
         const all = new Map();

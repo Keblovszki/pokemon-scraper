@@ -13,10 +13,18 @@ const MAX_PAGES = 20;
 
 const DELAY_MS = 1000;
 
-// Der sælges også Magic, Lorcana, Funko og tilbehør. Pokémon-varerne kendes på
-// deres "vendor", men akrylkasser og mapper ligger under producentens eget navn
-// og røber sig kun i titlen.
+// Der sælges også Magic, Lorcana og Yugioh. Pokémon-varerne kendes på deres
+// "vendor", men lommer, mapper og akrylkasser til kortene ligger under
+// producentens eget navn og røber sig kun i titlen.
 const POKEMON = /pok[eé]mon/i;
+
+// Producenter hvis Pokémon-varer ikke har med kortspillet at gøre. Listen er
+// vendt om med vilje: alt andet tilbehør med Pokémon i titlen er til kortene og
+// tæller med, så en ny mærkevare med lommer kommer af sig selv.
+const NON_CARD_VENDORS = /funko|squishmallow/i;
+
+// Et par varer er mærket som Pokémon af butikken, men er bamser.
+const PLUSH = /bamse|plush/i;
 
 // Endpointet er offentligt og vi henter syv sider hvert kvarter, så der er
 // ingen grund til at forklæde os som en browser.
@@ -64,7 +72,16 @@ async function fetchPage(pageNumber) {
     return products ?? [];
 }
 
-const isPokemon = product => POKEMON.test(product.vendor ?? "") || POKEMON.test(product.title ?? "");
+function isPokemon(product) {
+    const vendor = product.vendor ?? "";
+    const title = product.title ?? "";
+
+    if (PLUSH.test(title)) return false;
+    if (POKEMON.test(vendor)) return true;
+    if (!POKEMON.test(title)) return false;
+
+    return !NON_CARD_VENDORS.test(vendor);
+}
 
 function toProduct(product) {
     const variants = product.variants ?? [];

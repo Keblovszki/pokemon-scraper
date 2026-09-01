@@ -50,9 +50,11 @@ knække, henter 1577 varer på ti sekunder og behøver slet ingen browser — de
 `needsBrowser: false`, og så åbner agenten ikke Chrome for den. Proshop er undtagelsen, ikke
 reglen.
 
-Butikken sælger også Magic og tilbehør, så adapteren filtrerer på om `vendor` eller titlen
-nævner Pokémon. Det giver 540 varer mod 467 hvis man kun tog `vendor` — forskellen er
-akrylkasser og mapper, der ligger under producentens eget navn.
+**Kun kortspillet.** Botten skal følge Pokémon TCG, ikke bamser og figurer. Proshop henter
+derfor `/pokemon-kort` (20 varer) i stedet for `/Pokemon` (147). MTGwebshop tager alt med
+`vendor: "Pokémon"` plus tilbehør til kortene, og udelukker i stedet Funko og Squishmallow ved
+navn — listen er vendt om med vilje, så en ny mærkevare med lommer kommer med af sig selv. Det
+giver 508 varer.
 
 ## Hvem starter scrapingen
 
