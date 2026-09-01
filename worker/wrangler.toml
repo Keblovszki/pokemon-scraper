@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 # Kanalen der får driftsbeskeder: seeding-kvittering, "scraperen er tavs" og
 # advarsler om mistænkelige snapshots. Alarmer om varer styres af /watch og
 # havner i den kanal kommandoen blev kørt i.
-ADMIN_CHANNEL_ID = ""
+ADMIN_CHANNEL_ID = "1543971668324782092"
 
 # Hvor længe en butik må gå uden et snapshot før watchdog'en råber op. Den
 # lokale scraper kører typisk hvert 10. minut, så der er plads til et par
