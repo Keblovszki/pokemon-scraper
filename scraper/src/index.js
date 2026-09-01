@@ -48,7 +48,9 @@ async function runCycle() {
     for (const shop of targets) {
         const started = Date.now();
         try {
-            const page = await browserPage();
+            // Butikker der henter over et API skal ikke betale for at starte
+            // Chrome. Browseren åbnes først når en butik faktisk beder om den.
+            const page = shop.needsBrowser ? await browserPage() : null;
             const result = await shop.scrape(page, message => log(`${shop.id}:`, message));
             const seconds = Math.round((Date.now() - started) / 1000);
             log(`${shop.id}: ${result.products.length} varer på ${seconds}s (komplet: ${result.complete})`);

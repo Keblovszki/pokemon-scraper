@@ -17,6 +17,7 @@ const DELAY_MS = 2000;
 export const shop = {
     id: "proshop",
     name: "Proshop",
+    needsBrowser: true,
     categories: [{ label: "Pokemon", path: "/Pokemon" }],
 
     async scrape(page, log) {

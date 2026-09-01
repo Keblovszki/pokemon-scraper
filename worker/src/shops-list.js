@@ -3,4 +3,5 @@
 // Discord-siden af en ny butik kun skal skrives ét sted.
 export const SHOPS = [
     { id: "proshop", name: "Proshop" },
+    { id: "mtgwebshop", name: "MTGwebshop" },
 ];
