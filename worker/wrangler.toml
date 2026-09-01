@@ -1,0 +1,21 @@
+name = "pokemon-scraper-bot"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Kanalen der får driftsbeskeder: seeding-kvittering, "scraperen er tavs" og
+# advarsler om mistænkelige snapshots. Alarmer om varer styres af /watch og
+# havner i den kanal kommandoen blev kørt i.
+ADMIN_CHANNEL_ID = ""
+
+# Hvor længe en butik må gå uden et snapshot før watchdog'en råber op. Den
+# lokale scraper kører typisk hvert 10. minut, så der er plads til et par
+# fejlede kørsler før det er værd at forstyrre nogen.
+STALE_MINUTES = "45"
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[observability]
+enabled = true

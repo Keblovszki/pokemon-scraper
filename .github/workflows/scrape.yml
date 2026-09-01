@@ -1,0 +1,61 @@
+name: Scrape butikker
+
+on:
+  schedule:
+    # Hvert kvarter. GitHub kan forsinke planlagte kørsler når der er travlt,
+    # så regn med at det i praksis bliver 15-30 minutter.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+# To kørsler ad gangen ville sende to snapshots oven i hinanden, og så kan den
+# ene melde restock på noget den anden allerede har meldt.
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: scraper/package-lock.json
+
+      - name: Installér afhængigheder
+        working-directory: scraper
+        run: npm ci
+
+      # Runneren har normalt både Google Chrome og xvfb, og det er forskellen
+      # mellem en kørsel på et halvt minut og en på tre. Vi installerer kun det
+      # der mangler, så workflowet også holder hvis billedet ændrer sig.
+      #
+      # Det skal være rigtig Chrome, ikke Playwrights Chromium: det er den
+      # kombination der er afprøvet mod Proshop.
+      - name: Sikr Chrome og xvfb
+        working-directory: scraper
+        run: |
+          if ! command -v google-chrome >/dev/null; then
+            echo "Chrome mangler, installerer"
+            npx playwright install chrome --with-deps
+          fi
+          if ! command -v xvfb-run >/dev/null; then
+            echo "xvfb mangler, installerer"
+            sudo apt-get update
+            sudo apt-get install -y xvfb
+          fi
+          google-chrome --version
+
+      # Proshop afviser headless, så Chrome skal have et rigtigt vindue. xvfb
+      # giver den en skærm der ikke findes.
+      - name: Scrape og send snapshot
+        working-directory: scraper
+        run: xvfb-run -a npm run once
+        env:
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          INGEST_SECRET: ${{ secrets.INGEST_SECRET }}

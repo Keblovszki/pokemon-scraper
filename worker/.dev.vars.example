@@ -1,0 +1,10 @@
+# Kopiér til ".dev.vars" og udfyld. ".dev.vars" er ignoreret af git.
+# Wrangler indlæser filen automatisk under "wrangler dev".
+
+DISCORD_PUBLIC_KEY="din_discord_public_key"
+DISCORD_BOT_TOKEN="din_bot_token"
+MONGODB_URI="din_mongodb_connection_string"
+
+# Deles med den lokale scraper. Generér fx med:
+#   node -e "console.log(crypto.randomUUID())"
+INGEST_SECRET="et_langt_tilfaeldigt_token"
