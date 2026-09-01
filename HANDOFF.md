@@ -1,7 +1,7 @@
 # Handoff — hvor projektet står
 
-Skrevet 2026-08-31. Læs [README.md](README.md) for hvordan projektet er bygget; denne fil er
-kun status og næste skridt.
+Skrevet 2026-08-31, opdateret 2026-09-01. Læs [README.md](README.md) for hvordan projektet er
+bygget; denne fil er kun status og næste skridt.
 
 ## Hvad projektet er
 
@@ -10,101 +10,39 @@ En Discord-bot der overvåger webshops for Pokémon-varer og melder **nye varer*
 Discord-app, eget projekt — men bruger samme mønster: Cloudflare Worker, HTTP-interactions,
 MongoDB.
 
-## Færdigt og afprøvet
+## Status: i drift
 
-- **Al kode er skrevet.** `worker/` (Discord, diff, database, 7 slash-kommandoer) og
-  `scraper/` (Playwright-agent med Proshop-adapter).
-- **Proshop-adapteren er kørt mod den rigtige side:** 176 varer på ~4 sekunder over 2
-  sidevisninger. Alle selectorer virker.
-- **11/11 tests grønne** (`cd worker && npm test`) — filterlogik og rettighedstjek.
-- **Worker'en er deployet og live:**
-  `https://pokemon-scraper-bot.keblovszki.workers.dev`
-  `/health` svarer `{"ok":true}`, `/ingest` uden nøgle giver 401, Discord-endpointet uden
-  gyldig signatur giver 401. Cron `*/15 * * * *` er registreret.
-- **Botten er inviteret til Discord-serveren** med `permissions=19456`.
-- **GitHub Actions-workflowet er skrevet** (`.github/workflows/scrape.yml`, YAML valideret),
-  men aldrig kørt.
+Hele kæden er sat op og kørt igennem 2026-09-01. Der er ikke noget udestående opsætningsskridt.
 
-## Ikke gjort endnu
+- **Worker'en er live** på `https://pokemon-scraper-bot.keblovszki.workers.dev` med alle fire
+  hemmeligheder sat og `ADMIN_CHANNEL_ID` bundet til driftskanalen.
+- **Databasen svarer.** MongoDB Atlas, samme cluster som elo-botten, egen database
+  `pokemon_scraper`. Network Access står på `0.0.0.0/0`.
+- **Discord er koblet på:** interactions-endpointet er godkendt, de syv slash-kommandoer er
+  registreret globalt, og mindst én `/watch` er oprettet.
+- **Repoet er offentligt:** [github.com/Keblovszki/pokemon-scraper](https://github.com/Keblovszki/pokemon-scraper),
+  med `WORKER_URL` og `INGEST_SECRET` som Actions-secrets.
+- **GitHub Actions kører hvert kvarter.** Første kørsel tog 23 sekunder; Chrome kørte headed
+  under `xvfb-run` uden at Proshop opdagede noget.
+- **11/11 tests grønne** (`cd worker && npm test`).
 
-Intet virker endnu. Rækkefølgen herunder er den der mangler.
-
-### 1. Sæt de fire hemmeligheder på worker'en
-
-Brugeren skal selv køre disse i sit eget PowerShell-vindue — `wrangler` spørger interaktivt, så
-værdierne havner ikke i samtalen:
-
-```powershell
-cd C:\Projects\discord\pokemon-scraper\worker
-npx wrangler secret put DISCORD_PUBLIC_KEY
-npx wrangler secret put DISCORD_BOT_TOKEN
-npx wrangler secret put MONGODB_URI
-npx wrangler secret put INGEST_SECRET
-```
-
-- `DISCORD_PUBLIC_KEY` og `DISCORD_BOT_TOKEN`: fra Discord Developer Portal. Brugeren havde dem
-  i Notepad 2026-08-31; er de væk, kan token'et nulstilles igen under **Bot → Reset Token**.
-- `MONGODB_URI`: MongoDB Atlas → cluster → **Connect → Drivers**. Elo-bottens cluster kan
-  genbruges; koden bruger sin egen database, `pokemon_scraper`. **Network Access skal være
-  `0.0.0.0/0`** — Workers har ingen fast IP.
-- `INGEST_SECRET`: `node -e "console.log(crypto.randomUUID())"`. Skal bruges to steder — her og
-  som GitHub-secret i skridt 4.
-
-### 2. Sæt driftskanalen ind
-
-Mangler brugerens kanal-id. Sæt `ADMIN_CHANNEL_ID = "<id>"` i `worker/wrangler.toml` og kør
-`npx wrangler deploy` igen. Det er kanalen der får seeding-kvittering og
-"scraperen er tavs"-advarsler.
-
-Kanal-id: Discord → **Indstillinger → Avanceret → Udviklertilstand** til, højreklik på
-kanalen → **Kopiér kanal-id**.
-
-### 3. Kobl Discord på og registrér kommandoerne
-
-I Developer Portal → **General Information** → *Interactions Endpoint URL*:
+Sådan så første rigtige kørsel ud, og sådan ser en sund kørsel altså ud:
 
 ```
-https://pokemon-scraper-bot.keblovszki.workers.dev/
+proshop: 148 varer på 8s (komplet: true)
+proshop: Worker svarede: {"saved":148,"events":1,"alerts":1}
 ```
 
-Discord sender straks en PING. Fejler den, er `DISCORD_PUBLIC_KEY` forkert.
+## Hvis noget går galt
 
-Derefter, med brugerens Application ID og bot-token:
-
-```powershell
-cd C:\Projects\discord\pokemon-scraper\worker
-$env:APP_ID="..."; $env:BOT_TOKEN="..."; node command-setup.js
-```
-
-### 4. Læg projektet på GitHub og start cronjobbet
-
-Repoet skal være **offentligt** — der er ingen hemmeligheder i koden, og offentlige repos har
-gratis ubegrænsede Actions-minutter. Et privat repo bruger hele den gratis kvote på dette
-interval.
-
-```powershell
-cd C:\Projects\discord\pokemon-scraper
-git add -A
-git commit -m "Pokemon-vagten"
-gh repo create pokemon-scraper --public --source=. --push
-```
-
-Sæt to secrets under **Settings → Secrets and variables → Actions**:
-
-| Secret | Værdi |
-| --- | --- |
-| `WORKER_URL` | `https://pokemon-scraper-bot.keblovszki.workers.dev` (uden skråstreg til slut) |
-| `INGEST_SECRET` | Samme værdi som worker'ens |
-
-Kør så **Actions → Scrape butikker → Run workflow** manuelt første gang.
-
-### 5. Tjek at det virker
-
-1. Driftskanalen får `✅ Proshop er nu i databasen med ~175 varer` — det er seedingen
-2. `/shops` i Discord → 🟢 Proshop, "lige nu"
-3. `/watch keyword:elite trainer box` i den kanal der skal have alarmer
-4. Alarmer kommer først fra **andet** snapshot. Første er kun seeding, ellers ville der komme
-   175 beskeder på én gang
+- **Ingen beskeder i flere timer.** Kig i driftskanalen. Vagthunden melder efter 45 minutters
+  tavshed, én gang pr. stilhed. Kommer der intet, kører scraperen, men finder ingen ændringer.
+- **Actions fejler.** `gh run list --limit 5` og `gh run view <id> --log`. Er det Proshop der
+  giver 403, så læs afsnittet nedenfor før du prøver at fikse det.
+- **Alarmer udebliver, men snapshots kommer ind.** `/watches` i Discord. `alerts: 0` i loggen
+  med `events` over 0 betyder at ingen overvågning matchede.
+- **Start altid med `npm run dry`** i `scraper/`. Den scraper og printer uden at sende noget og
+  kræver ingen opsætning.
 
 ## Ting der ikke skal undersøges igen
 
@@ -145,14 +83,14 @@ User-Agent eller cookies.
 
 ## Kendt hul, ikke bygget
 
-En vare der går fra **ingen pris** til **at have en pris** udløser ingen alarm. 5 af de 176
+En vare der går fra **ingen pris** til **at have en pris** udløser ingen alarm. 5 af de ~148
 Proshop-varer er annonceret uden pris og gemmes med `price: null`; prisfald kræver en tidligere
 pris. De udløser til gengæld restock den dag de kan købes, hvilket nok er det øjeblik der
 betyder noget. Brugeren er blevet spurgt og har ikke bedt om en fjerde alarmtype.
 
 ## Praktisk
 
-- Git-repoet er initialiseret, men **der er ikke committet noget endnu**.
+- Repoet ligger offentligt på GitHub som `Keblovszki/pokemon-scraper`, gren `main`.
 - `.gitignore` dækker `node_modules/`, `.dev.vars`, `.env`, `.wrangler/`, `.browser-profile/`
   og `.idea/`.
 - Cloudflare-konto: den konto wrangler allerede er logget ind med lokalt.
