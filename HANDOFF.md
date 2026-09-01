@@ -22,8 +22,8 @@ Hele kæden er sat op og kørt igennem 2026-09-01. Der er ikke noget udestående
   registreret globalt, og mindst én `/watch` er oprettet.
 - **Repoet er offentligt:** [github.com/Keblovszki/pokemon-scraper](https://github.com/Keblovszki/pokemon-scraper),
   med `WORKER_URL` og `INGEST_SECRET` som Actions-secrets.
-- **GitHub Actions kører hvert kvarter.** Første kørsel tog 23 sekunder; Chrome kørte headed
-  under `xvfb-run` uden at Proshop opdagede noget.
+- **Scrape-jobbet kører hvert kvarter**, startet af worker'ens cron. Første kørsel tog 23
+  sekunder; Chrome kørte headed under `xvfb-run` uden at Proshop opdagede noget.
 - **11/11 tests grønne** (`cd worker && npm test`).
 
 Sådan så første rigtige kørsel ud, og sådan ser en sund kørsel altså ud:
@@ -32,6 +32,21 @@ Sådan så første rigtige kørsel ud, og sådan ser en sund kørsel altså ud:
 proshop: 148 varer på 8s (komplet: true)
 proshop: Worker svarede: {"saved":148,"events":1,"alerts":1}
 ```
+
+## Hvem starter scrapingen
+
+Worker'ens cron kalder GitHubs `workflow_dispatch`-API hvert kvarter. Workflowet lytter **kun**
+på dispatch; `schedule` er taget ud med vilje.
+
+GitHubs egen `schedule` blev prøvet 2026-09-01 og fyrede ikke en eneste gang på to en halv
+time, selvom workflowet stod som `active`. Planlagte kørsler bliver forsinket eller droppet når
+der er pres på de delte runnere, og et kvartersinterval rammer netop de klokkeslæt hvor presset
+er størst. Cloudflares cron har ikke det problem. Læg den ikke tilbage.
+
+Det kræver et fine-grained GitHub-token med `Actions: Read and write` på dette ene repo, sat som
+worker-secret `GITHUB_TOKEN`. **Tokenet udløber**, og den dag det sker, stopper scrapingen —
+vagthunden melder det i driftskanalen inden for 45 minutter, og fejlen står i worker-loggen som
+`Kunne ikke starte scrape-jobbet: 401`.
 
 ## Hvis noget går galt
 
