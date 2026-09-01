@@ -6,7 +6,7 @@ bygget; denne fil er kun status og næste skridt.
 ## Hvad projektet er
 
 En Discord-bot der overvåger webshops for Pokémon-varer og melder **nye varer**, **restock** og
-**prisfald**. Første butik er Proshop. Botten er en anden bot end `eloranking` — egen
+**prisfald**. Butikkerne er Proshop og MTGwebshop. Botten er en anden bot end `eloranking` — egen
 Discord-app, eget projekt — men bruger samme mønster: Cloudflare Worker, HTTP-interactions,
 MongoDB.
 
@@ -32,6 +32,27 @@ Sådan så første rigtige kørsel ud, og sådan ser en sund kørsel altså ud:
 proshop: 148 varer på 8s (komplet: true)
 proshop: Worker svarede: {"saved":148,"events":1,"alerts":1}
 ```
+
+## At tilføje en butik
+
+En butik er én fil i `scraper/src/shops/`, registreret to steder: `scraper/src/shops/index.js`
+og `worker/src/shops-list.js`. Diff-logikken er butiksuafhængig, så der skal ikke røres noget
+i worker'en ud over navnet. Kør `node command-setup.js` bagefter, ellers mangler butikken i
+`/watch`s valgmuligheder.
+
+Adapteren returnerer `{ products, complete }`, hvor hver vare har `productId`, `name`, `url`,
+`image`, `price`, `normalPrice`, `inStock` og `stockText`. `complete: false` betyder "det her er
+ikke hele butikken", og worker'en holder så igen med alarmerne.
+
+**Kig efter en JSON-kilde før du skriver selectorer.** MTGwebshop kører på Shopify, hvor hele
+kataloget ligger på `/products.json?limit=250&page=N`. Den adapter har ingen selectorer der kan
+knække, henter 1577 varer på ti sekunder og behøver slet ingen browser — den sætter
+`needsBrowser: false`, og så åbner agenten ikke Chrome for den. Proshop er undtagelsen, ikke
+reglen.
+
+Butikken sælger også Magic og tilbehør, så adapteren filtrerer på om `vendor` eller titlen
+nævner Pokémon. Det giver 540 varer mod 467 hvis man kun tog `vendor` — forskellen er
+akrylkasser og mapper, der ligger under producentens eget navn.
 
 ## Hvem starter scrapingen
 
