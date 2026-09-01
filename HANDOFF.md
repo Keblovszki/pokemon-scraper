@@ -155,6 +155,6 @@ betyder noget. Brugeren er blevet spurgt og har ikke bedt om en fjerde alarmtype
 - Git-repoet er initialiseret, men **der er ikke committet noget endnu**.
 - `.gitignore` dækker `node_modules/`, `.dev.vars`, `.env`, `.wrangler/`, `.browser-profile/`
   og `.idea/`.
-- Cloudflare-konto: `hannibalkk1337@gmail.com`, wrangler er logget ind.
+- Cloudflare-konto: den konto wrangler allerede er logget ind med lokalt.
 - `npm run dry` i `scraper/` scraper og printer resultatet uden at sende noget, og kræver ingen
   opsætning. Start altid dér hvis noget ser forkert ud.
