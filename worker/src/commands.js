@@ -2,8 +2,6 @@ import { products, watches, shops, newWatchCode } from "./store.js";
 import { formatPrice, formatRelative, truncate } from "./format.js";
 import { SHOPS } from "./shops-list.js";
 
-export const EPHEMERAL_COMMANDS = new Set(["watches", "shops", "latest", "search", "help"]);
-
 const EVENT_PRESETS = {
     alle: ["new", "restock", "price_drop"],
     new: ["new"],

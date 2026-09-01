@@ -1,7 +1,7 @@
 import { InteractionType, InteractionResponseType, verifyKey } from "discord-interactions";
 import { withDb, shops } from "./store.js";
 import { ingestSnapshot } from "./ingest.js";
-import { runCommand, EPHEMERAL_COMMANDS } from "./commands.js";
+import { runCommand } from "./commands.js";
 import { postMessage, staleWarning } from "./notify.js";
 
 export default {
@@ -53,7 +53,6 @@ async function handleInteraction(request, env, ctx) {
 
     return Response.json({
         type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-        data: EPHEMERAL_COMMANDS.has(interaction.data.name) ? { flags: 64 } : {},
     });
 }
 
