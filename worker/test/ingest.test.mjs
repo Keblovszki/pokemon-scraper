@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { matchesWatch } from "../src/ingest.js";
+import { canPrune, matchesWatch } from "../src/ingest.js";
 
 const product = (overrides = {}) => ({
     productId: "3196393",
@@ -57,4 +57,22 @@ test("prisfald bruger 5 procent når overvågningen ikke siger andet", () => {
     const drop = (from, to) => ({ type: "price_drop", product: product({ price: to }), previous: { price: from } });
     assert.equal(matchesWatch(w, drop(100, 90)), true);
     assert.equal(matchesWatch(w, drop(100, 99)), false);
+});
+
+const snapshot = (overrides = {}) => ({ complete: true, incomingCount: 20, flooded: false, ...overrides });
+
+test("et komplet snapshot rydder de varer op der ikke er med", () => {
+    assert.equal(canPrune(snapshot()), true);
+});
+
+test("et delvist snapshot rydder ikke op", () => {
+    assert.equal(canPrune(snapshot({ complete: false })), false);
+});
+
+test("et tomt snapshot tømmer ikke butikken", () => {
+    assert.equal(canPrune(snapshot({ incomingCount: 0 })), false);
+});
+
+test("nye varenumre holder oprydningen tilbage sammen med alarmerne", () => {
+    assert.equal(canPrune(snapshot({ flooded: true })), false);
 });

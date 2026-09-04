@@ -56,6 +56,13 @@ derfor `/pokemon-kort` (20 varer) i stedet for `/Pokemon` (147). MTGwebshop tage
 navn — listen er vendt om med vilje, så en ny mærkevare med lommer kommer med af sig selv. Det
 giver 508 varer.
 
+**Databasen følger med filtreringen.** Et komplet snapshot rydder op efter sig: varer der ikke er
+med, bliver slettet. Det gælder både varer butikken har taget af hylden og varer en ny filtrering
+har sorteret fra, så `/shops`, `/search` og `/latest` ikke bliver ved med at vise bamser efter at
+adapteren er holdt op med at hente dem. Oprydningen holder igen ved `complete: false`, ved et tomt
+snapshot og når varenumrene ser ud til at være skiftet — samme spærre som alarmerne. Antallet står
+som `removed` i worker'ens svar.
+
 ## Hvem starter scrapingen
 
 Worker'ens cron kalder GitHubs `workflow_dispatch`-API hvert kvarter. Workflowet lytter **kun**

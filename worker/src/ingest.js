@@ -66,6 +66,20 @@ export async function ingestSnapshot(env, db, snapshot) {
 
     if (writes.length) await products(db).bulkWrite(writes, { ordered: false });
 
+    const newCount = events.filter(e => e.type === "new").length;
+    const flooded = Boolean(shopDoc?.seeded) && newCount > FLOOD_LIMIT;
+
+    // Varer der ikke er med i et komplet snapshot er væk fra butikken — eller
+    // sorteret fra af adapteren — og skal også være væk hos os. Ellers bliver
+    // /search, /latest og tællingerne i /shops ved med at vise varer botten
+    // ikke længere følger.
+    let removed = 0;
+    if (canPrune({ complete, incomingCount: incoming.length, flooded })) {
+        const keep = incoming.map(item => productKey(shop, item.productId));
+        const { deletedCount } = await products(db).deleteMany({ shop, _id: { $nin: keep } });
+        removed = deletedCount;
+    }
+
     await shops(db).updateOne(
         { _id: shop },
         {
@@ -84,11 +98,10 @@ export async function ingestSnapshot(env, db, snapshot) {
         await postMessage(env, env.ADMIN_CHANNEL_ID, {
             content: `✅ **${shopName}** er nu i databasen med ${incoming.length} varer. Alarmer starter ved næste snapshot — brug \`/watch\` for at vælge hvad du vil have besked om.`,
         });
-        return { seeded: incoming.length, alerts: 0 };
+        return { seeded: incoming.length, removed, alerts: 0 };
     }
 
-    const newCount = events.filter(e => e.type === "new").length;
-    if (newCount > FLOOD_LIMIT) {
+    if (flooded) {
         await postMessage(env, env.ADMIN_CHANNEL_ID, {
             content: `⚠️ **${shopName}** leverede ${newCount} ukendte varer i ét snapshot. Varenumrene er formentlig ændret, så alarmerne er holdt tilbage. Tjek adapteren i \`scraper/src/shops/\`.`,
         });
@@ -96,7 +109,15 @@ export async function ingestSnapshot(env, db, snapshot) {
     }
 
     const alerts = await deliverEvents(env, db, shop, events);
-    return { saved: incoming.length, events: events.length, alerts };
+    return { saved: incoming.length, events: events.length, removed, alerts };
+}
+
+// Oprydningen sletter alt vi ikke lige har set, så den skal kun løbe når
+// snapshottet kan bære det: et delvist snapshot mangler pr. definition varer,
+// et tomt snapshot er en adapter der er knækket, og et snapshot med nye
+// varenumre ville tage hele butikken med sig.
+export function canPrune({ complete, incomingCount, flooded }) {
+    return complete !== false && incomingCount > 0 && !flooded;
 }
 
 async function deliverEvents(env, db, shop, events) {
