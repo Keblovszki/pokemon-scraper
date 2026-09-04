@@ -6,8 +6,8 @@ bygget; denne fil er kun status og næste skridt.
 ## Hvad projektet er
 
 En Discord-bot der overvåger webshops for Pokémon-varer og melder **nye varer**, **restock** og
-**prisfald**. Butikkerne er Proshop, MTGwebshop, PBCards
-og Muggle Alley. Botten er en anden bot end `eloranking` — egen
+**prisfald**. Butikkerne er Proshop, MTGwebshop, PBCards,
+Muggle Alley og Kelz0r. Botten er en anden bot end `eloranking` — egen
 Discord-app, eget projekt — men bruger samme mønster: Cloudflare Worker, HTTP-interactions,
 MongoDB.
 
@@ -45,8 +45,7 @@ Adapteren returnerer `{ products, complete }`, hvor hver vare har `productId`, `
 `image`, `price`, `normalPrice`, `inStock` og `stockText`. `complete: false` betyder "det her er
 ikke hele butikken", og worker'en holder så igen med alarmerne.
 
-**Kig efter en JSON-kilde før du skriver selectorer.** Tre af de fire butikker har en, og ingen
-af dem har en selector der kan knække:
+**Kig efter en JSON-kilde før du skriver selectorer.** Tre af de fem butikker har en:
 
 - **MTGwebshop og PBCards** kører på Shopify, hvor hele kataloget ligger på
   `/products.json?limit=250&page=N`. Hentningen og feltopsætningen ligger i
@@ -57,7 +56,20 @@ af dem har en selector der kan knække:
   hvornår vi har det hele. Ser en butik sådan ud, så kig efter `ng-repeat` i HTML'en og søg
   bagefter i butikkens `app.js` efter dens `$resource`-adresse.
 
-De sætter alle `needsBrowser: false`, og så åbner agenten ikke Chrome for dem. Proshop er
+**Findes der ingen, så led efter microdata.** Kelz0r er en Zen Cart uden JSON-kilde, men hver
+vare er mærket op med schema.org: navn, adresse, billede, pris og lagerstatus står i
+`itemprop`-attributter. Det er butikkens data, ikke dens design, så de flytter sig ikke når
+nogen skifter tema. Adapteren klipper siden op på `itemtype="http://schema.org/Product"` og
+læser felterne ud af hvert stykke — men kun inden for varens eget `itemprop="offers"`, for det
+sidste stykke på siden slæber resten af sidens HTML med sig, sidebar og overstregede
+tilbudspriser og det hele.
+
+To fælder i Kelz0rs data, som allerede er lukket: varer butikken ikke sælger står til
+**999999 kr**, og gemte vi det tal, ville varen udløse et gigantisk prisfald den dag den kom til
+salg igen — de gemmes uden pris. Og varens adresse slæber en sessionsnøgle med sig, som er ny
+hver gang, så forespørgslen skæres af.
+
+Alle fire sætter `needsBrowser: false`, og så åbner agenten ikke Chrome for dem. Proshop er
 undtagelsen, ikke reglen.
 
 **Kun kortspillet.** Botten skal følge Pokémon TCG, ikke bamser og figurer. Proshop henter
@@ -68,7 +80,9 @@ giver omkring 505 varer. PBCards er ren kortbutik: alle Pokémon-varer har vendo
 `Pokémon Trading Card Game`, og filteret tager desuden titler med Pokémon i, hvilket kun er
 butikkens egne akrylkasser til boksene. Det giver 89 af butikkens 133 varer. Muggle Alley
 filtreres på varens kategori, som står i dens adresse, og udelader bamser og figurer både på
-kategori og på titel. Det giver 331 af butikkens 524 varer.
+kategori og på titel. Det giver 331 af butikkens 524 varer. Kelz0r behøver slet ikke
+et filter: alt under kategori 187 er kortspillet, og underkategorierne læses af rodsiden, så en
+ny kategori kommer med af sig selv. Det giver 3821 varer — flere end de andre fire tilsammen.
 
 **Databasen følger med filtreringen.** Et komplet snapshot rydder op efter sig: varer der ikke er
 med, bliver slettet. Det gælder både varer butikken har taget af hylden og varer en ny filtrering
@@ -76,6 +90,12 @@ har sorteret fra, så `/shops`, `/search` og `/latest` ikke bliver ved med at vi
 adapteren er holdt op med at hente dem. Oprydningen holder igen ved `complete: false`, ved et tomt
 snapshot og når varenumrene ser ud til at være skiftet — samme spærre som alarmerne. Antallet står
 som `removed` i worker'ens svar.
+
+**Kelz0r er den tunge.** Butikken viser 40 varer pr. side og lader sig ikke overtale til flere,
+så en kørsel er omkring hundrede sideopslag og tager 75 sekunder. Det er stadig hurtigere end
+Proshops tyve varer, fordi der ikke skal startes en browser, men det er også hundrede
+forespørgsler hvert kvarter til en lille dansk butik. Der er en halv sekunds pause mellem
+siderne med vilje. Sæt den ikke ned.
 
 ## Hvem starter scrapingen
 
