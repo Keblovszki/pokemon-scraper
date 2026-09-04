@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canPrune, matchesWatch } from "../src/ingest.js";
+import { canPrune, chunk, matchesWatch } from "../src/ingest.js";
 
 const product = (overrides = {}) => ({
     productId: "3196393",
@@ -75,4 +75,16 @@ test("et tomt snapshot tømmer ikke butikken", () => {
 
 test("nye varenumre holder oprydningen tilbage sammen med alarmerne", () => {
     assert.equal(canPrune(snapshot({ flooded: true })), false);
+});
+
+test("skrivningerne deles i bidder så worker'en ikke løber tør for CPU", () => {
+    assert.deepEqual(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
+});
+
+test("en bid der går lige op giver ingen tom sidste bid", () => {
+    assert.deepEqual(chunk([1, 2, 3, 4], 2), [[1, 2], [3, 4]]);
+});
+
+test("ingen skrivninger giver ingen bidder", () => {
+    assert.deepEqual(chunk([], 250), []);
 });

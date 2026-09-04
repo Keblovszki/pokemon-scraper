@@ -7,6 +7,11 @@ import { dropPercent } from "./format.js";
 // én gang. Vi gemmer dem, men holder alarmerne tilbage.
 const FLOOD_LIMIT = 30;
 
+// Kelz0r leverer knap 4000 varer, og skrives de i én bulkWrite, bliver
+// worker'en slået ihjel med "exceeded CPU time limit". Prisen for at pakke
+// skrivningerne vokser hurtigere end antallet, så de sendes i bidder.
+const WRITE_BATCH = 250;
+
 const DEFAULT_MIN_DROP_PCT = 5;
 
 export async function ingestSnapshot(env, db, snapshot) {
@@ -64,7 +69,9 @@ export async function ingestSnapshot(env, db, snapshot) {
         });
     }
 
-    if (writes.length) await products(db).bulkWrite(writes, { ordered: false });
+    for (const batch of chunk(writes, WRITE_BATCH)) {
+        await products(db).bulkWrite(batch, { ordered: false });
+    }
 
     const newCount = events.filter(e => e.type === "new").length;
     const flooded = Boolean(shopDoc?.seeded) && newCount > FLOOD_LIMIT;
@@ -73,10 +80,12 @@ export async function ingestSnapshot(env, db, snapshot) {
     // sorteret fra af adapteren — og skal også være væk hos os. Ellers bliver
     // /search, /latest og tællingerne i /shops ved med at vise varer botten
     // ikke længere følger.
+    //
+    // Alt vi lige har skrevet har fået `lastSeen` sat til snapshottets
+    // tidspunkt, så det der står tilbage med en ældre tid er det der manglede.
     let removed = 0;
     if (canPrune({ complete, incomingCount: incoming.length, flooded })) {
-        const keep = incoming.map(item => productKey(shop, item.productId));
-        const { deletedCount } = await products(db).deleteMany({ shop, _id: { $nin: keep } });
+        const { deletedCount } = await products(db).deleteMany({ shop, lastSeen: { $lt: now } });
         removed = deletedCount;
     }
 
@@ -118,6 +127,14 @@ export async function ingestSnapshot(env, db, snapshot) {
 // varenumre ville tage hele butikken med sig.
 export function canPrune({ complete, incomingCount, flooded }) {
     return complete !== false && incomingCount > 0 && !flooded;
+}
+
+export function chunk(items, size) {
+    const batches = [];
+    for (let start = 0; start < items.length; start += size) {
+        batches.push(items.slice(start, start + size));
+    }
+    return batches;
 }
 
 async function deliverEvents(env, db, shop, events) {
