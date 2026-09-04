@@ -91,6 +91,13 @@ adapteren er holdt op med at hente dem. Oprydningen holder igen ved `complete: f
 snapshot og når varenumrene ser ud til at være skiftet — samme spærre som alarmerne. Antallet står
 som `removed` i worker'ens svar.
 
+**Store snapshots skal skrives i bidder.** Kelz0rs 3821 varer i én `bulkWrite` slog worker'en
+ihjel med `Worker exceeded CPU time limit`, og snapshottet nåede aldrig i databasen — scraperen
+prøvede tre gange og gav op. Prisen for at pakke skrivningerne vokser hurtigere end antallet, så
+de sendes 250 ad gangen; så koster den samme kørsel 480 ms CPU. Af samme grund sletter
+oprydningen efter `lastSeen` i stedet for efter en liste med alle varenumrene. Læg dem ikke
+tilbage i én forespørgsel, næste butik kan være endnu større.
+
 **Kelz0r er den tunge.** Butikken viser 40 varer pr. side og lader sig ikke overtale til flere,
 så en kørsel er omkring hundrede sideopslag og tager 75 sekunder. Det er stadig hurtigere end
 Proshops tyve varer, fordi der ikke skal startes en browser, men det er også hundrede
