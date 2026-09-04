@@ -6,7 +6,8 @@ bygget; denne fil er kun status og næste skridt.
 ## Hvad projektet er
 
 En Discord-bot der overvåger webshops for Pokémon-varer og melder **nye varer**, **restock** og
-**prisfald**. Butikkerne er Proshop, MTGwebshop og PBCards. Botten er en anden bot end `eloranking` — egen
+**prisfald**. Butikkerne er Proshop, MTGwebshop, PBCards
+og Muggle Alley. Botten er en anden bot end `eloranking` — egen
 Discord-app, eget projekt — men bruger samme mønster: Cloudflare Worker, HTTP-interactions,
 MongoDB.
 
@@ -44,11 +45,20 @@ Adapteren returnerer `{ products, complete }`, hvor hver vare har `productId`, `
 `image`, `price`, `normalPrice`, `inStock` og `stockText`. `complete: false` betyder "det her er
 ikke hele butikken", og worker'en holder så igen med alarmerne.
 
-**Kig efter en JSON-kilde før du skriver selectorer.** MTGwebshop og PBCards kører begge på
-Shopify, hvor hele kataloget ligger på `/products.json?limit=250&page=N`. Hentningen og
-feltopsætningen ligger i `scraper/src/shops/shopify.js`, så en Shopify-butik er ét filter og
-en adresse — ingen selectorer der kan knække, og ingen browser: de sætter `needsBrowser: false`,
-og så åbner agenten ikke Chrome for dem. Proshop er undtagelsen, ikke reglen.
+**Kig efter en JSON-kilde før du skriver selectorer.** Tre af de fire butikker har en, og ingen
+af dem har en selector der kan knække:
+
+- **MTGwebshop og PBCards** kører på Shopify, hvor hele kataloget ligger på
+  `/products.json?limit=250&page=N`. Hentningen og feltopsætningen ligger i
+  `scraper/src/shops/shopify.js`, så en Shopify-butik er en adresse og et filter.
+- **Muggle Alley** kører på Smartweb. Siden ser ud som almindelig HTML, men varelisten hentes af
+  et AngularJS-frontend fra `/json/products`, og vi spørger samme endpoint direkte.
+  `field=category` uden en rigtig kategori giver hele butikken, og `amount` i svaret fortæller
+  hvornår vi har det hele. Ser en butik sådan ud, så kig efter `ng-repeat` i HTML'en og søg
+  bagefter i butikkens `app.js` efter dens `$resource`-adresse.
+
+De sætter alle `needsBrowser: false`, og så åbner agenten ikke Chrome for dem. Proshop er
+undtagelsen, ikke reglen.
 
 **Kun kortspillet.** Botten skal følge Pokémon TCG, ikke bamser og figurer. Proshop henter
 derfor `/pokemon-kort` (20 varer) i stedet for `/Pokemon` (147). MTGwebshop tager alt med
@@ -56,7 +66,9 @@ derfor `/pokemon-kort` (20 varer) i stedet for `/Pokemon` (147). MTGwebshop tage
 navn — listen er vendt om med vilje, så en ny mærkevare med lommer kommer med af sig selv. Det
 giver omkring 505 varer. PBCards er ren kortbutik: alle Pokémon-varer har vendor
 `Pokémon Trading Card Game`, og filteret tager desuden titler med Pokémon i, hvilket kun er
-butikkens egne akrylkasser til boksene. Det giver 89 af butikkens 133 varer.
+butikkens egne akrylkasser til boksene. Det giver 89 af butikkens 133 varer. Muggle Alley
+filtreres på varens kategori, som står i dens adresse, og udelader bamser og figurer både på
+kategori og på titel. Det giver 331 af butikkens 524 varer.
 
 **Databasen følger med filtreringen.** Et komplet snapshot rydder op efter sig: varer der ikke er
 med, bliver slettet. Det gælder både varer butikken har taget af hylden og varer en ny filtrering

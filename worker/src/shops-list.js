@@ -5,4 +5,5 @@ export const SHOPS = [
     { id: "proshop", name: "Proshop" },
     { id: "mtgwebshop", name: "MTGwebshop" },
     { id: "pbcards", name: "PBCards" },
+    { id: "mugglealley", name: "Muggle Alley" },
 ];
