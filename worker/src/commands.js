@@ -181,7 +181,11 @@ async function searchProducts(options, db) {
     const keyword = String(opt(options, "keyword")).trim();
     const onlyInStock = opt(options, "kun_paa_lager") ?? false;
 
-    const filter = { name: { $regex: escapeRegex(keyword), $options: "i" } };
+    // Hvert ord skal findes i navnet, men rækkefølgen er fri, så
+    // "super premium collection" også rammer "Premium Super Collection".
+    const words = keyword.split(/\s+/).filter(Boolean);
+    if (!words.length) return { content: "Skriv mindst ét ord at søge efter." };
+    const filter = { $and: words.map(word => ({ name: { $regex: escapeRegex(word), $options: "i" } })) };
     if (onlyInStock) filter.inStock = true;
 
     const found = await products(db).find(filter).sort({ price: 1 }).limit(10).toArray();
