@@ -6,7 +6,7 @@ import { postMessage, staleWarning } from "./notify.js";
 
 export default {
     async scheduled(event, env, ctx) {
-        ctx.waitUntil(Promise.all([startScrape(env), watchdog(env)]));
+        ctx.waitUntil(Promise.all([startScrape(env, scrapePlan(event, env)), watchdog(env)]));
     },
 
     async fetch(request, env, ctx) {
@@ -143,8 +143,21 @@ function validateSnapshot(snapshot) {
 // kvartersinterval rammer netop de klokkeslæt hvor presset er størst.
 // Cloudflares cron er til gengæld pålidelig, så vi lader den bede GitHub om at
 // køre jobbet i stedet. "workflow_dispatch" starter med det samme, hver gang.
-async function startScrape(env) {
+//
+// Cron'en fyrer hvert 5. minut. På kvartererne scrapes alle butikker; imellem
+// dem kun FAST_SHOP, så en let butik kan følges tættere uden at Kelz0r og
+// Proshop skal med hver gang.
+export function scrapePlan(event, env) {
+    const minute = new Date(event.scheduledTime).getUTCMinutes();
+    if (minute % 15 === 0) return { shop: "" };
+
+    const shop = env.FAST_SHOP ?? "";
+    return shop ? { shop } : null;
+}
+
+async function startScrape(env, plan) {
     if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) return;
+    if (!plan) return;
 
     const url = `https://api.github.com/repos/${env.GITHUB_REPO}/actions/workflows/${env.GITHUB_WORKFLOW ?? "scrape.yml"}/dispatches`;
     const response = await fetch(url, {
@@ -158,7 +171,7 @@ async function startScrape(env) {
             "User-Agent": "pokemon-scraper-bot",
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ref: env.GITHUB_REF ?? "main" }),
+        body: JSON.stringify({ ref: env.GITHUB_REF ?? "main", inputs: plan }),
     });
 
     // Et vellykket dispatch svarer 204 uden indhold. Alt andet logges og lades

@@ -16,12 +16,18 @@ GITHUB_REPO = "Keblovszki/pokemon-scraper"
 GITHUB_WORKFLOW = "scrape.yml"
 
 # Hvor længe en butik må gå uden et snapshot før watchdog'en råber op.
-# Scrape-jobbet startes hvert kvarter, så der er plads til et par fejlede
+# Alle butikker scrapes hvert kvarter, så der er plads til et par fejlede
 # kørsler før det er værd at forstyrre nogen.
 STALE_MINUTES = "45"
 
+# Butikken der scrapes alene i minutterne mellem kvartererne. Skal være et
+# butiks-id fra scraper/src/shops/. Tom streng slår de ekstra kørsler fra.
+FAST_SHOP = "mugglealley"
+
 [triggers]
-crons = ["*/15 * * * *"]
+# Hvert 5. minut. På kvartererne scrapes alle butikker; imellem dem kun
+# FAST_SHOP, som er tre JSON-kald og ingen browser.
+crons = ["*/5 * * * *"]
 
 [observability]
 enabled = true

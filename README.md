@@ -106,9 +106,10 @@ Sæt to secrets under **Settings → Secrets and variables → Actions**:
 | `WORKER_URL` | Worker-URL'en fra trin 2, uden skråstreg til slut |
 | `INGEST_SECRET` | Samme værdi som worker'ens `INGEST_SECRET` |
 
-Kør den så manuelt første gang: **Actions → Scrape butikker → Run workflow**. Derefter kører
-den selv hvert kvarter. GitHub kan forsinke planlagte kørsler når der er travlt, så regn med
-15-30 minutter i praksis.
+Kør den så manuelt første gang: **Actions → Scrape butikker → Run workflow**. Derefter starter
+worker'ens cron den selv: alle butikker hvert kvarter, og den butik der står i `FAST_SHOP` i
+`worker/wrangler.toml` alene hvert 5. minut imellem. Feltet **shop** i Run workflow gør det
+samme i hånden.
 
 Bemærk: GitHub slår planlagte workflows fra i repos uden aktivitet i 60 dage. Så skal du bare
 trykke **Run workflow** igen.
@@ -217,7 +218,7 @@ Botten er bygget til at holde kæft når noget er gået i stykker, i stedet for 
 - **Over 30 ukendte varer** i ét snapshot betyder næsten altid at butikken har ændret sine
   varenumre. Varerne gemmes, alarmerne holdes tilbage, og driftskanalen får en advarsel.
 - **Højst 25 alarmer pr. kanal pr. snapshot**, resten opsummeres i én linje.
-- En **watchdog** kører hvert kvarter og siger til hvis en butik ikke har sendt noget i 45
+- En **watchdog** kører sammen med cron'en og siger til hvis en butik ikke har sendt noget i 45
   minutter (`STALE_MINUTES`). Én advarsel pr. stilhed.
 
 ## Test

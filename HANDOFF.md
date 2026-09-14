@@ -23,7 +23,8 @@ Hele kæden er sat op og kørt igennem 2026-09-01. Der er ikke noget udestående
   registreret globalt, og mindst én `/watch` er oprettet.
 - **Repoet er offentligt:** [github.com/Keblovszki/pokemon-scraper](https://github.com/Keblovszki/pokemon-scraper),
   med `WORKER_URL` og `INGEST_SECRET` som Actions-secrets.
-- **Scrape-jobbet kører hvert kvarter**, startet af worker'ens cron. Første kørsel tog 23
+- **Scrape-jobbet kører hvert kvarter**, startet af worker'ens cron, og Muggle Alley alene hvert
+  5. minut imellem kvartererne (se nedenfor). Første kørsel tog 23
   sekunder; Chrome kørte headed under `xvfb-run` uden at Proshop opdagede noget.
 - **11/11 tests grønne** (`cd worker && npm test`).
 
@@ -106,8 +107,17 @@ siderne med vilje. Sæt den ikke ned.
 
 ## Hvem starter scrapingen
 
-Worker'ens cron kalder GitHubs `workflow_dispatch`-API hvert kvarter. Workflowet lytter **kun**
-på dispatch; `schedule` er taget ud med vilje.
+Worker'ens cron fyrer hvert 5. minut og kalder GitHubs `workflow_dispatch`-API. På kvartererne
+sendes intet input, og workflowet scraper alle butikker. I minutterne imellem sendes
+`inputs.shop = FAST_SHOP` (sat i `wrangler.toml`, i dag `mugglealley`), og jobbet kører så
+`npm run once -- --shop=mugglealley`. Muggle Alley er valgt fordi den koster tre JSON-kald og
+ingen browser, så 36 kald i timen er mindre end én kunde der klikker rundt. Sæt ikke Kelz0r
+eller Proshop ind der: Kelz0r er hundrede sideopslag pr. kørsel, og Proshop skal have Chrome op.
+Tom `FAST_SHOP` slår de ekstra kørsler fra igen. Workflowet lytter **kun** på dispatch;
+`schedule` er taget ud med vilje.
+
+Kørslerne hedder `Scrape alle butikker` og `Scrape mugglealley` i Actions, så `gh run list`
+viser hvad der blev kørt. `concurrency` lader dem stå i kø efter hinanden, ikke køre samtidig.
 
 GitHubs egen `schedule` blev prøvet 2026-09-01 og fyrede ikke en eneste gang på to en halv
 time, selvom workflowet stod som `active`. Planlagte kørsler bliver forsinket eller droppet når

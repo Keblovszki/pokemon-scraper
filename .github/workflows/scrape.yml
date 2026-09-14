@@ -2,10 +2,19 @@ name: Scrape butikker
 
 # Kun dispatch. GitHubs "schedule" blev prøvet og fyrede ikke en eneste gang
 # på to en halv time — planlagte kørsler bliver droppet når der er pres på de
-# delte runnere. Worker'ens cron kalder i stedet dispatch-API'et hvert kvarter,
-# og den starter med det samme.
+# delte runnere. Worker'ens cron kalder i stedet dispatch-API'et hvert 5.
+# minut, og den starter med det samme. På kvartererne uden "shop", så alle
+# butikker scrapes; imellem dem med én butik, der er let nok til at tåle det.
 on:
   workflow_dispatch:
+    inputs:
+      shop:
+        description: "Butiks-id der scrapes alene (tom = alle butikker)"
+        required: false
+        default: ""
+        type: string
+
+run-name: "Scrape ${{ inputs.shop || 'alle butikker' }}"
 
 # To kørsler ad gangen ville sende to snapshots oven i hinanden, og så kan den
 # ene melde restock på noget den anden allerede har meldt.
@@ -55,7 +64,8 @@ jobs:
       # giver den en skærm der ikke findes.
       - name: Scrape og send snapshot
         working-directory: scraper
-        run: xvfb-run -a npm run once
+        run: xvfb-run -a npm run once -- ${SHOP:+--shop=$SHOP}
         env:
           WORKER_URL: ${{ secrets.WORKER_URL }}
           INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
+          SHOP: ${{ inputs.shop }}
