@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canPrune, chunk, matchesWatch } from "../src/ingest.js";
+import { canPrune, chunk, matchesWatch, pruneBefore } from "../src/ingest.js";
 
 const product = (overrides = {}) => ({
     productId: "3196393",
@@ -87,4 +87,13 @@ test("en bid der går lige op giver ingen tom sidste bid", () => {
 
 test("ingen skrivninger giver ingen bidder", () => {
     assert.deepEqual(chunk([], 250), []);
+});
+
+test("en vare der mangler i ét snapshot slettes ikke med det samme", () => {
+    const now = new Date("2026-09-07T00:34:00Z");
+    const seenLastRound = new Date("2026-09-07T00:19:00Z");
+    const goneForHours = new Date("2026-09-06T20:00:00Z");
+
+    assert.equal(seenLastRound < pruneBefore(now), false);
+    assert.equal(goneForHours < pruneBefore(now), true);
 });

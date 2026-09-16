@@ -12,6 +12,12 @@ const FLOOD_LIMIT = 30;
 // skrivningerne vokser hurtigere end antallet, så de sendes i bidder.
 const WRITE_BATCH = 250;
 
+// Kelz0r bytter af og til to varer med samme navn rundt mellem to sider, og så
+// mangler den ene i et ellers komplet snapshot. Blev den slettet med det samme,
+// kom den tilbage som "ny vare" i næste runde. En vare skal derfor have været
+// væk i flere snapshots i træk, før den regnes for fjernet.
+const PRUNE_GRACE_MS = 3 * 60 * 60 * 1000;
+
 const DEFAULT_MIN_DROP_PCT = 5;
 
 export async function ingestSnapshot(env, db, snapshot) {
@@ -85,7 +91,7 @@ export async function ingestSnapshot(env, db, snapshot) {
     // tidspunkt, så det der står tilbage med en ældre tid er det der manglede.
     let removed = 0;
     if (canPrune({ complete, incomingCount: incoming.length, flooded })) {
-        const { deletedCount } = await products(db).deleteMany({ shop, lastSeen: { $lt: now } });
+        const { deletedCount } = await products(db).deleteMany({ shop, lastSeen: { $lt: pruneBefore(now) } });
         removed = deletedCount;
     }
 
@@ -127,6 +133,12 @@ export async function ingestSnapshot(env, db, snapshot) {
 // varenumre ville tage hele butikken med sig.
 export function canPrune({ complete, incomingCount, flooded }) {
     return complete !== false && incomingCount > 0 && !flooded;
+}
+
+// Varer med et `lastSeen` før dette tidspunkt har manglet i alle snapshots
+// inden for fristen og må slettes.
+export function pruneBefore(now) {
+    return new Date(now.getTime() - PRUNE_GRACE_MS);
 }
 
 export function chunk(items, size) {

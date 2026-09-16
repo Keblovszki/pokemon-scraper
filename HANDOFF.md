@@ -85,8 +85,10 @@ kategori og på titel. Det giver 331 af butikkens 524 varer. Kelz0r behøver sle
 et filter: alt under kategori 187 er kortspillet, og underkategorierne læses af rodsiden, så en
 ny kategori kommer med af sig selv. Det giver 3821 varer — flere end de andre fire tilsammen.
 
-**Databasen følger med filtreringen.** Et komplet snapshot rydder op efter sig: varer der ikke er
-med, bliver slettet. Det gælder både varer butikken har taget af hylden og varer en ny filtrering
+**Databasen følger med filtreringen.** Et komplet snapshot rydder op efter sig: varer der ikke har
+været med i tre timer, bliver slettet. Fristen er der fordi Kelz0r bytter varer med samme navn
+rundt mellem to sider, så én vare kan mangle i et enkelt snapshot og være tilbage i det næste —
+blev den slettet straks, gav den en ny "Ny vare"-alarm hver gang. Det gælder både varer butikken har taget af hylden og varer en ny filtrering
 har sorteret fra, så `/shops`, `/search` og `/latest` ikke bliver ved med at vise bamser efter at
 adapteren er holdt op med at hente dem. Oprydningen holder igen ved `complete: false`, ved et tomt
 snapshot og når varenumrene ser ud til at være skiftet — samme spærre som alarmerne. Antallet står
