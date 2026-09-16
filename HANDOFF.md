@@ -101,6 +101,19 @@ de sendes 250 ad gangen; så koster den samme kørsel 480 ms CPU. Af samme grund
 oprydningen efter `lastSeen` i stedet for efter en liste med alle varenumrene. Læg dem ikke
 tilbage i én forespørgsel, næste butik kan være endnu større.
 
+**Mongo-forbindelser dør efter `connectTimeoutMS`.** Driveren sætter `connectTimeoutMS` som
+timer på socket'en under opkoblingen og slår den fra bagefter, men Workers' Node-lag slår den ikke
+fra. Med 5 sekunder døde arbejdsforbindelsen 5 sekunder efter den blev åbnet — også midt i en
+skrivning — driveren åbnede en ny, som døde på samme måde, og hver af Kelz0rs 16 bidder kostede
+en forbindelse. Det tog et minut pr. snapshot og løb ind i loftet på 50 subrequests (`Too many
+subrequests by single Worker invocation`), så første forsøg fejlede med 500 næsten hver gang.
+Små butikker mærkede intet, fordi de er færdige inden 5 sekunder. Derfor står `connectTimeoutMS`
+på et minut i `store.js`; `serverSelectionTimeoutMS` på 5 sekunder er stadig det der stopper en
+kommando når databasen er væk. Af samme grund kører overvågningen som `poll` med `maxPoolSize: 1`:
+en Worker må kun have seks sockets åbne ad gangen, og driverens standard bruger seks alene på
+overvågning af Atlas' tre servere. Worker'en logger antal åbnede forbindelser ved hvert snapshot;
+normalt er det 1, og er det flere, står hele forløbet med tidsstempler i loggen.
+
 **Kelz0r er den tunge.** Butikken viser 40 varer pr. side og lader sig ikke overtale til flere,
 så en kørsel er omkring hundrede sideopslag og tager 75 sekunder. Det er stadig hurtigere end
 Proshops tyve varer, fordi der ikke skal startes en browser, men det er også hundrede
