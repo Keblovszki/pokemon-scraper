@@ -2,6 +2,9 @@ import { wait } from "../browser.js";
 
 // Fælles hentning for butikker på Shopify. Hele kataloget ligger frit som JSON
 // på /products.json, så en Shopify-butik er ét filter og ingen selectorer.
+//
+// En butik der er for stor til at hente hel, kan hentes som én af sine
+// samlinger i stedet: /collections/<handle>/products.json har samme form.
 const PAGE_SIZE = 250;
 
 // Sikkerhedsnet hvis pagineringen holder op med at give mening.
@@ -15,13 +18,15 @@ const USER_AGENT = "pokemon-scraper (+https://github.com/Keblovszki/pokemon-scra
 
 export const POKEMON = /pok[eé]mon/i;
 
-// Henter hele kataloget og beholder de varer `keep` siger ja til.
-export async function scrapeShopify({ base, keep }, log) {
+// Henter hele kataloget, eller samlingen `collection`, og beholder de varer
+// `keep` siger ja til.
+export async function scrapeShopify({ base, collection, keep }, log) {
+    const listBase = collection ? `${base}/collections/${collection}` : base;
     const products = [];
     let complete = false;
 
     for (let pageNumber = 1; pageNumber <= MAX_PAGES; pageNumber++) {
-        const batch = await fetchPage(base, pageNumber);
+        const batch = await fetchPage(listBase, pageNumber);
         const relevant = batch.filter(keep).map(product => toProduct(base, product));
         products.push(...relevant);
         log(`side ${pageNumber}: ${batch.length} varer, heraf ${relevant.length} Pokémon (i alt ${products.length})`);
@@ -40,8 +45,8 @@ export async function scrapeShopify({ base, keep }, log) {
     return { products, complete };
 }
 
-async function fetchPage(base, pageNumber) {
-    const url = `${base}/products.json?limit=${PAGE_SIZE}&page=${pageNumber}`;
+async function fetchPage(listBase, pageNumber) {
+    const url = `${listBase}/products.json?limit=${PAGE_SIZE}&page=${pageNumber}`;
     const response = await fetch(url, {
         headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
     });

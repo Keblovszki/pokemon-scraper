@@ -7,7 +7,7 @@ bygget; denne fil er kun status og næste skridt.
 
 En Discord-bot der overvåger webshops for Pokémon-varer og melder **nye varer**, **restock** og
 **prisfald**. Butikkerne er Proshop, MTGwebshop, PBCards,
-Muggle Alley og Kelz0r. Botten er en anden bot end `eloranking` — egen
+Muggle Alley, Kelz0r og Matraws. Botten er en anden bot end `eloranking` — egen
 Discord-app, eget projekt — men bruger samme mønster: Cloudflare Worker, HTTP-interactions,
 MongoDB.
 
@@ -46,11 +46,13 @@ Adapteren returnerer `{ products, complete }`, hvor hver vare har `productId`, `
 `image`, `price`, `normalPrice`, `inStock` og `stockText`. `complete: false` betyder "det her er
 ikke hele butikken", og worker'en holder så igen med alarmerne.
 
-**Kig efter en JSON-kilde før du skriver selectorer.** Tre af de fem butikker har en:
+**Kig efter en JSON-kilde før du skriver selectorer.** Fire af de seks butikker har en:
 
-- **MTGwebshop og PBCards** kører på Shopify, hvor hele kataloget ligger på
+- **MTGwebshop, PBCards og Matraws** kører på Shopify, hvor hele kataloget ligger på
   `/products.json?limit=250&page=N`. Hentningen og feltopsætningen ligger i
-  `scraper/src/shops/shopify.js`, så en Shopify-butik er en adresse og et filter.
+  `scraper/src/shops/shopify.js`, så en Shopify-butik er en adresse og et filter. Er butikken
+  for stor til at hente hel, så find en af dens samlinger på `/collections.json` og giv
+  `collection` med; `/collections/<handle>/products.json` har samme form som hele kataloget.
 - **Muggle Alley** kører på Smartweb. Siden ser ud som almindelig HTML, men varelisten hentes af
   et AngularJS-frontend fra `/json/products`, og vi spørger samme endpoint direkte.
   `field=category` uden en rigtig kategori giver hele butikken, og `amount` i svaret fortæller
@@ -70,7 +72,7 @@ To fælder i Kelz0rs data, som allerede er lukket: varer butikken ikke sælger s
 salg igen — de gemmes uden pris. Og varens adresse slæber en sessionsnøgle med sig, som er ny
 hver gang, så forespørgslen skæres af.
 
-Alle fire sætter `needsBrowser: false`, og så åbner agenten ikke Chrome for dem. Proshop er
+Alle fem sætter `needsBrowser: false`, og så åbner agenten ikke Chrome for dem. Proshop er
 undtagelsen, ikke reglen.
 
 **Kun kortspillet.** Botten skal følge Pokémon TCG, ikke bamser og figurer. Proshop henter
@@ -84,6 +86,12 @@ filtreres på varens kategori, som står i dens adresse, og udelader bamser og f
 kategori og på titel. Det giver 331 af butikkens 524 varer. Kelz0r behøver slet ikke
 et filter: alt under kategori 187 er kortspillet, og underkategorierne læses af rodsiden, så en
 ny kategori kommer med af sig selv. Det giver 3821 varer — flere end de andre fire tilsammen.
+Matraws har over 22.000 Pokémon-varer, og næsten alle er enkeltkort, som botten ikke skal følge.
+Derfor hentes kun samlingen `alt-pokemon` (ca. 1500 varer, 6 sider), og ud af den ryger
+enkeltkort og gradede kort på varetypen (`Pokémon Single`, `Graded Card`), figurer og bamser på
+varetype og producent, og merchandise på en særlig regel: godt hundrede varer har ingen varetype,
+og af dem er kun dem med "TCG" i titlen eller hos producenten kortvarer — resten er sokker,
+sengetøj og T-shirts. Det giver omkring 908 varer.
 
 **Databasen følger med filtreringen.** Et komplet snapshot rydder op efter sig: varer der ikke har
 været med i tre timer, bliver slettet. Fristen er der fordi Kelz0r bytter varer med samme navn
