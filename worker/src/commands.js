@@ -1,6 +1,6 @@
 import { products, watches, shops, newWatchCode } from "./store.js";
 import { formatPrice, formatRelative, truncate } from "./format.js";
-import { SHOPS } from "./shops-list.js";
+import { SHOPS, staleAfterMs } from "./shops-list.js";
 
 const EVENT_PRESETS = {
     alle: ["new", "restock", "price_drop"],
@@ -140,12 +140,11 @@ async function shopStatus(env, db) {
         return { content: "Ingen butikker har sendt et snapshot endnu. Kører scraper-agenten?" };
     }
 
-    const staleAfter = Number(env.STALE_MINUTES ?? 45) * 60000;
     const lines = await Promise.all(registered.map(async shop => {
         const stored = await products(db).countDocuments({ shop: shop._id });
         const inStock = await products(db).countDocuments({ shop: shop._id, inStock: true });
         const age = Date.now() - new Date(shop.lastScrapeAt).getTime();
-        const health = age > staleAfter ? "🔴" : shop.lastComplete === false ? "🟡" : "🟢";
+        const health = age > staleAfterMs(shop._id, env) ? "🔴" : shop.lastComplete === false ? "🟡" : "🟢";
 
         return [
             `${health} **${shop.name}** — ${formatRelative(shop.lastScrapeAt)}`,

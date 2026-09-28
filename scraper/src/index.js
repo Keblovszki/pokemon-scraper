@@ -7,6 +7,7 @@ const once = args.has("--once");
 const dryRun = args.has("--dry-run");
 const visible = args.has("--visible");
 const onlyShop = [...args].find(a => a.startsWith("--shop="))?.split("=")[1];
+const skipped = ([...args].find(a => a.startsWith("--skip="))?.split("=")[1] ?? "").split(",").filter(Boolean);
 
 const config = {
     workerUrl: (process.env.WORKER_URL ?? "").replace(/\/$/, ""),
@@ -20,7 +21,7 @@ if (!dryRun && (!config.workerUrl || !config.ingestSecret)) {
     process.exit(1);
 }
 
-const targets = onlyShop ? [findShop(onlyShop)].filter(Boolean) : SHOPS;
+const targets = onlyShop ? [findShop(onlyShop)].filter(Boolean) : SHOPS.filter(s => !skipped.includes(s.id));
 if (!targets.length) {
     console.error(`❌ Kender ingen butik med id "${onlyShop}". Kendte: ${SHOPS.map(s => s.id).join(", ")}`);
     process.exit(1);

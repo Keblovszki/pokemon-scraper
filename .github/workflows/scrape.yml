@@ -13,8 +13,13 @@ on:
         required: false
         default: ""
         type: string
+      skip:
+        description: "Butiks-id'er der springes over, kommasepareret"
+        required: false
+        default: ""
+        type: string
 
-run-name: "Scrape ${{ inputs.shop || 'alle butikker' }}"
+run-name: "Scrape ${{ inputs.shop || (inputs.skip && format('alle undtagen {0}', inputs.skip)) || 'alle butikker' }}"
 
 # To kørsler ad gangen ville sende to snapshots oven i hinanden, og så kan den
 # ene melde restock på noget den anden allerede har meldt.
@@ -64,8 +69,9 @@ jobs:
       # giver den en skærm der ikke findes.
       - name: Scrape og send snapshot
         working-directory: scraper
-        run: xvfb-run -a npm run once -- ${SHOP:+--shop=$SHOP}
+        run: xvfb-run -a npm run once -- ${SHOP:+--shop=$SHOP} ${SKIP:+--skip=$SKIP}
         env:
           WORKER_URL: ${{ secrets.WORKER_URL }}
           INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
           SHOP: ${{ inputs.shop }}
+          SKIP: ${{ inputs.skip }}

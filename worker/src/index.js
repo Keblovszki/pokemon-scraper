@@ -3,6 +3,7 @@ import { withDb, shops } from "./store.js";
 import { ingestSnapshot } from "./ingest.js";
 import { runCommand } from "./commands.js";
 import { postMessage, staleWarning } from "./notify.js";
+import { SHOPS, staleAfterMs } from "./shops-list.js";
 
 export default {
     async scheduled(event, env, ctx) {
@@ -146,10 +147,14 @@ function validateSnapshot(snapshot) {
 //
 // Cron'en fyrer hvert 5. minut. På kvartererne scrapes alle butikker; imellem
 // dem kun FAST_SHOP, så en let butik kan følges tættere uden at Kelz0r og
-// Proshop skal med hver gang.
+// Proshop skal med hver gang. Butikker med "hourly" springes over på de tre
+// kvarterer der ikke er hele timer.
 export function scrapePlan(event, env) {
     const minute = new Date(event.scheduledTime).getUTCMinutes();
-    if (minute % 15 === 0) return { shop: "" };
+    if (minute === 0) return { shop: "", skip: "" };
+    if (minute % 15 === 0) {
+        return { shop: "", skip: SHOPS.filter(s => s.hourly).map(s => s.id).join(",") };
+    }
 
     const shop = env.FAST_SHOP ?? "";
     return shop ? { shop } : null;
@@ -182,12 +187,10 @@ async function startScrape(env, plan) {
 }
 
 async function watchdog(env) {
-    const staleAfter = Number(env.STALE_MINUTES ?? 45) * 60000;
-
     await withDb(env, async db => {
         for (const shop of await shops(db).find({}).toArray()) {
             const silentFor = Date.now() - new Date(shop.lastScrapeAt).getTime();
-            if (silentFor <= staleAfter) continue;
+            if (silentFor <= staleAfterMs(shop._id, env)) continue;
 
             // Én advarsel pr. stilhed. Et nyt snapshot er nyere end advarslen og
             // gør dermed automatisk plads til den næste.

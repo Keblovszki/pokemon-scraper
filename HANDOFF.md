@@ -163,6 +163,24 @@ vagthunden melder det i driftskanalen inden for 45 minutter, og fejlen står i w
 - **Start altid med `npm run dry`** i `scraper/`. Den scraper og printer uden at sende noget og
   kræver ingen opsætning.
 
+## Proshop blokerer GitHubs runnere
+
+Fra aftenen 2026-09-23 slap kun omkring hver ottende Proshop-kørsel igennem på GitHub Actions
+(før da ca. seks ud af syv). Resten fejler med `Kom ikke forbi bot-beskyttelsen`. Den samme
+tørkørsel fra brugerens egen maskine gik igennem på et sekund. Runner-imaget skiftede samtidig
+(Chrome 152 → 153), men gamle og nye runnere fejlede lige ofte, så det er ikke årsagen. Det mest
+sandsynlige er at Proshops bot-beskyttelse er blevet strengere over for datacenter-IP'er; det er
+ikke bevist.
+
+Brugeren valgte at leve med det. Alternativet, at køre Proshop fra brugerens maskine, blev
+fravalgt fordi scraperen skal køre uden at den er tændt.
+
+2026-09-28 var det værre: én ud af tolv kørsler kom igennem, og tre timers tavshed var normalt.
+Brugeren bad om at Proshop ikke blev forsøgt så tit. Den har derfor `hourly: true` i
+`worker/src/shops-list.js` og scrapes kun på hele timer; på de andre kvarterer sender worker'en
+`skip: "proshop"` med, og scraperen tager `--skip=proshop`. Vagthunden venter et døgn på Proshop
+(`staleMinutes: 1440`). Om færre forsøg giver en højere andel der går igennem, vides ikke.
+
 ## Ting der ikke skal undersøges igen
 
 Alt herunder er målt 2026-08-31, fra samme IP, inden for få minutter. Det er lagt fast fordi

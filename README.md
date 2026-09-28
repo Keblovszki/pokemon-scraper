@@ -107,7 +107,7 @@ Sæt to secrets under **Settings → Secrets and variables → Actions**:
 | `INGEST_SECRET` | Samme værdi som worker'ens `INGEST_SECRET` |
 
 Kør den så manuelt første gang: **Actions → Scrape butikker → Run workflow**. Derefter starter
-worker'ens cron den selv: alle butikker hvert kvarter, og den butik der står i `FAST_SHOP` i
+worker'ens cron den selv: alle butikker hvert kvarter (Proshop dog kun på hele timer), og den butik der står i `FAST_SHOP` i
 `worker/wrangler.toml` alene hvert 5. minut imellem. Feltet **shop** i Run workflow gør det
 samme i hånden.
 
@@ -219,7 +219,8 @@ Botten er bygget til at holde kæft når noget er gået i stykker, i stedet for 
   varenumre. Varerne gemmes, alarmerne holdes tilbage, og driftskanalen får en advarsel.
 - **Højst 25 alarmer pr. kanal pr. snapshot**, resten opsummeres i én linje.
 - En **watchdog** kører sammen med cron'en og siger til hvis en butik ikke har sendt noget i 45
-  minutter (`STALE_MINUTES`). Én advarsel pr. stilhed.
+  minutter (`STALE_MINUTES`). Én advarsel pr. stilhed. En butik kan få sin egen grænse med
+  `staleMinutes` i `worker/src/shops-list.js`; Proshop har et døgn.
 
 ## Test
 
