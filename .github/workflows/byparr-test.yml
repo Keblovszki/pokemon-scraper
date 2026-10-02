@@ -1,7 +1,7 @@
 name: Byparr-test mod Proshop
 
 # Engangstest: kommer Byparr forbi Proshops bot-beskyttelse fra GitHubs
-# runnere? Containeren genstartes før hvert forsøg, så ingen cookie fra et
+# runnere? Containeren startes forfra før hvert forsøg, så ingen cookie fra et
 # tidligere forsøg hjælper det næste — det svarer til en frisk scrape-kørsel.
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Start Byparr
         run: |
@@ -28,17 +28,25 @@ jobs:
         run: |
           ok=0
           for i in $(seq 1 "$ATTEMPTS"); do
-            docker restart byparr > /dev/null
+            # En genstart kan hænge, så containeren smides helt væk i stedet.
+            docker rm -f byparr > /dev/null
+            docker run -d --name byparr -p 8191:8191 ghcr.io/thephaseless/byparr:latest > /dev/null
             for w in $(seq 1 60); do curl -sf localhost:8191/health > /dev/null && break; sleep 2; done
 
-            curl -s -m 120 localhost:8191/v1 -H 'Content-Type: application/json' \
-              -d '{"cmd":"request.get","url":"https://www.proshop.dk/pokemon-kort?ps=100&pn=1","maxTimeout":90000}' \
+            start=$(date +%s)
+            : > out.json
+            timeout 150 curl -s -m 140 localhost:8191/v1 -H 'Content-Type: application/json' \
+              -d '{"cmd":"request.get","url":"https://www.proshop.dk/pokemon-kort?ps=100&pn=1","maxTimeout":120000}' \
               > out.json || true
-            items=$(jq -r '.solution.response // ""' out.json | grep -o 'site-productlist-item' | wc -l)
-            title=$(jq -r '.solution.response // ""' out.json | grep -o '<title>[^<]*' | head -1 | sed 's/<title>//')
+            took=$(( $(date +%s) - start ))
+            items=$(jq -r '.solution.response // ""' out.json 2>/dev/null | grep -o 'site-productlist-item' | wc -l)
+            title=$(jq -r '.solution.response // ""' out.json 2>/dev/null | grep -o '<title>[^<]*' | head -1 | sed 's/<title>//')
 
-            if [ "$items" -gt 0 ]; then ok=$((ok+1)); echo "Forsøg $i: OK ($items varer)"
-            else echo "Forsøg $i: FEJL — titel: ${title:-ingen} — $(jq -c '{status, message}' out.json 2>/dev/null || head -c 200 out.json)"; fi
+            if [ "$items" -gt 0 ]; then ok=$((ok+1)); echo "Forsøg $i: OK ($items varer, ${took}s)"
+            else
+              echo "Forsøg $i: FEJL efter ${took}s — titel: ${title:-ingen} — svar: $(head -c 300 out.json)"
+              docker logs --tail 15 byparr 2>&1 | sed 's/^/    /'
+            fi
 
             sleep 30
           done
